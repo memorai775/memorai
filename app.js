@@ -42,6 +42,23 @@ const sampleCards = [
 
 
 // ------------------------------
+// 文字を画面に安全に出す
+// ------------------------------
+
+// カードの問題・答えなど、利用者が入力した文字は必ずこれを通してから innerHTML に入れる
+// （他の人が作ったカードに <script> などが仕込まれていても、ただの文字として表示する）
+function escapeHTML(text) {
+
+  return String(text ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+
+// ------------------------------
 // カード取得・保存
 // ------------------------------
 
@@ -1267,12 +1284,12 @@ function showStudyScreen() {
     <div class="flashcard">
 
       <div class="subject">
-        ${card.subject}
+        ${escapeHTML(card.subject)}
       </div>
 
 
       <div class="question">
-        ${card.question}
+        ${escapeHTML(card.question)}
       </div>
 
 
@@ -1331,7 +1348,7 @@ function showAnswer() {
       </div>
 
       <div class="answer-text">
-        ${card.answer}
+        ${escapeHTML(card.answer)}
       </div>
 
     </div>
@@ -1833,7 +1850,7 @@ function showStatsPage() {
           <div class="subject-header">
 
             <div class="subject-name">
-              ${subject}
+              ${escapeHTML(subject)}
             </div>
 
             <div class="subject-accuracy">
@@ -1928,11 +1945,11 @@ function showStatsPage() {
             <div class="weak-content">
 
               <div class="weak-subject">
-                ${card.subject}
+                ${escapeHTML(card.subject)}
               </div>
 
               <div class="weak-question">
-                ${card.question}
+                ${escapeHTML(card.question)}
               </div>
 
               <div class="weak-result">
