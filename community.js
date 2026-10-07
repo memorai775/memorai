@@ -90,6 +90,8 @@ function getCommunityUser() {
 }
 
 
+// ★ボタンを押した処理の中で、await より前に呼ぶこと
+//   （iPhone の Safari などは、少し待ってから開くログイン画面をブロックする）
 async function communitySignIn() {
 
   try {
@@ -102,15 +104,50 @@ async function communitySignIn() {
 
   } catch (error) {
 
-    if (error.code !== "auth/popup-closed-by-user") {
+    if (
+      error.code === "auth/popup-closed-by-user" ||
+      error.code === "auth/cancelled-popup-request"
+    ) {
 
-      alert(
-        "ログインできませんでした。\nポップアップがブロックされていないか確認してください。\n（" + error.code + "）"
-      );
+      return false;
     }
+
+
+    const messages = {
+      "auth/popup-blocked":
+        "ログイン画面がブロックされました。ブラウザのポップアップの設定を確認してください。",
+      "auth/unauthorized-domain":
+        "このサイトからのログインが許可されていません（運営の設定待ちです）。",
+      "auth/operation-not-supported-in-this-environment":
+        "この開き方ではログインできません。ホーム画面のアイコンからではなく、Safari や Chrome で開いてください。",
+      "auth/network-request-failed":
+        "インターネットにつながっていないようです。"
+    };
+
+    alert(
+      "ログインできませんでした。\n" +
+      (messages[error.code] || "時間をおいてもう一度試してください。") +
+      "\n（" + error.code + "）"
+    );
 
     return false;
   }
+}
+
+
+// ログイン済みならそのユーザー、まだなら Google ログインを開いて、ログインできたユーザーを返す（できなければ null）
+// 一覧を開いた時点でログイン状態は読み込み済みなので、currentUser をそのまま使ってすぐにログイン画面を開く
+async function requireCommunityUser() {
+
+  if (communityAuth.currentUser) {
+
+    return communityAuth.currentUser;
+  }
+
+  const ok =
+    await communitySignIn();
+
+  return ok ? communityAuth.currentUser : null;
 }
 
 
@@ -661,21 +698,12 @@ function importDeck(deckId, deck, deckCards) {
 
 async function showPostDeckPage() {
 
-  let user =
-    await getCommunityUser();
-
+  const user =
+    await requireCommunityUser();
 
   if (!user) {
 
-    const ok =
-      await communitySignIn();
-
-    if (!ok) {
-
-      return;
-    }
-
-    user = communityAuth.currentUser;
+    return;
   }
 
 
@@ -1056,21 +1084,12 @@ function showDeleteDeckPage(deckId, deck) {
 
 async function showReportDeckPage(deckId, deck) {
 
-  let user =
-    await getCommunityUser();
-
+  const user =
+    await requireCommunityUser();
 
   if (!user) {
 
-    const ok =
-      await communitySignIn();
-
-    if (!ok) {
-
-      return;
-    }
-
-    user = communityAuth.currentUser;
+    return;
   }
 
 
