@@ -1041,6 +1041,23 @@
     }
 
 
+    .card-delete-button {
+
+      align-self: center;
+
+      white-space: nowrap;
+
+      font-size: 14px;
+    }
+
+
+    .weak-question,
+    .weak-result {
+
+      overflow-wrap: anywhere;
+    }
+
+
     button:disabled {
 
       opacity: 0.4;
@@ -1281,7 +1298,7 @@
 
         📚<br>
 
-        カード
+        単語帳
 
       </button>
 
@@ -1322,6 +1339,7 @@
   <script src="englishWords.js"></script>
   <script src="subjectCards.js"></script>
   <script src="app.js"></script>
+  <script src="mydecks.js"></script>
 
   <!-- みんなの単語帳（Firebase）。SDK は後から読み込むので、オフラインでも他の機能は動く -->
   <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>

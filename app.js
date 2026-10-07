@@ -547,7 +547,9 @@ let progress = getProgress();
 
 let currentCard = 0;
 
-// レベル別に勉強中なら { level, type }（それ以外は null）
+// 10枚ずつの勉強中なら、何を勉強しているか（それ以外は null）
+//   レベル別：{ subject, level, type }
+//   自分の単語帳：{ myDeckId }
 let currentLevelStudy = null;
 
 
@@ -1201,15 +1203,11 @@ function getLevelPriority(card) {
 }
 
 
-// 選んだ科目・レベル・種類から10枚出題する
-function startLevelStudy(subject, level, type) {
+// 出題する順に並べる（復習時期の来た苦手 → 未学習 → それ以外）
+// レベル別の勉強と、単語帳の勉強で使う
+function sortForStudy(studyCards) {
 
-  // ★必ず全カードを読み直してから絞る
-  const levelCards =
-    getLevelCards(getScopedCards(getCards()), subject, level, type);
-
-
-  levelCards.sort((a, b) => {
+  return studyCards.sort((a, b) => {
 
     const priorityDiff =
       getLevelPriority(a) - getLevelPriority(b);
@@ -1233,6 +1231,17 @@ function startLevelStudy(subject, level, type) {
       a.id - b.id
     );
   });
+}
+
+
+// 選んだ科目・レベル・種類から10枚出題する
+function startLevelStudy(subject, level, type) {
+
+  // ★必ず全カードを読み直してから絞る
+  const levelCards =
+    sortForStudy(
+      getLevelCards(getScopedCards(getCards()), subject, level, type)
+    );
 
 
   // 学習用の配列だけを使う（保存は updateCardInStorage で1枚ずつ）
@@ -1504,7 +1513,11 @@ function showCompleteScreen() {
               id="nextLevelButton"
               style="margin-bottom:12px;"
             >
-              ${getLevelStudyLabel(currentLevelStudy)} の次の10枚
+              ${
+                currentLevelStudy.myDeckId
+                  ? `「${escapeHTML((getMyDeck(currentLevelStudy.myDeckId) || {}).title)}」`
+                  : getLevelStudyLabel(currentLevelStudy)
+              } の次の10枚
             </button>
           `
           : ""
@@ -1528,11 +1541,14 @@ function showCompleteScreen() {
 
   if (nextLevelButton) {
 
-    const { subject, level, type } = currentLevelStudy;
+    const { subject, level, type, myDeckId } = currentLevelStudy;
 
     nextLevelButton.addEventListener(
       "click",
-      () => startLevelStudy(subject, level, type)
+      () =>
+        myDeckId
+          ? startMyDeckStudy(myDeckId)
+          : startLevelStudy(subject, level, type)
     );
   }
 
@@ -1543,176 +1559,6 @@ function showCompleteScreen() {
       "click",
       showHome
     );
-}
-
-
-// ------------------------------
-// カード追加画面
-// ------------------------------
-
-function showCardPage() {
-
-  setActiveNav("cardNavButton");
-
-  document.querySelector("main").innerHTML = `
-
-    <h1 class="page-title">
-      カードを追加
-    </h1>
-
-
-    <div class="form-card">
-
-      <div class="form-group">
-
-        <label>
-          科目
-        </label>
-
-        <input
-          type="text"
-          id="subjectInput"
-          placeholder="例：数学"
-        >
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label>
-          問題
-        </label>
-
-        <textarea
-          id="questionInput"
-          placeholder="例：三平方の定理を表す式は？"
-        ></textarea>
-
-      </div>
-
-
-      <div class="form-group">
-
-        <label>
-          答え
-        </label>
-
-        <textarea
-          id="answerInput"
-          placeholder="例：a² + b² = c²"
-        ></textarea>
-
-      </div>
-
-
-      <button
-        class="add-card-button"
-        id="addCardButton"
-      >
-        ＋ カードを追加
-      </button>
-
-    </div>
-
-  `;
-
-
-  document
-    .querySelector("#addCardButton")
-    .addEventListener(
-      "click",
-      addCard
-    );
-}
-
-
-// ------------------------------
-// カード追加
-// ------------------------------
-
-function addCard() {
-
-  const subject =
-    document
-      .querySelector("#subjectInput")
-      .value
-      .trim();
-
-
-  const question =
-    document
-      .querySelector("#questionInput")
-      .value
-      .trim();
-
-
-  const answer =
-    document
-      .querySelector("#answerInput")
-      .value
-      .trim();
-
-
-  if (!subject || !question || !answer) {
-
-    alert(
-      "科目・問題・答えを全部入力してください！"
-    );
-
-    return;
-  }
-
-
-  // ★必ず保存されている全カードを取得
-  const allCards = getCards();
-
-
-  const newCard = {
-
-    id: Date.now(),
-
-    question: question,
-
-    answer: answer,
-
-    subject: subject,
-
-    correct: 0,
-
-    wrong: 0
-
-  };
-
-
-  allCards.push(newCard);
-
-
-  saveCards(allCards);
-
-
-  // 現在のカード一覧も更新
-  cards = allCards;
-
-
-  alert(
-    "カードを追加しました！"
-  );
-
-
-  document
-    .querySelector("#subjectInput")
-    .value = "";
-
-
-  document
-    .querySelector("#questionInput")
-    .value = "";
-
-
-  document
-    .querySelector("#answerInput")
-    .value = "";
 }
 
 
@@ -2517,7 +2363,7 @@ document
   .querySelector("#cardNavButton")
   .addEventListener(
     "click",
-    showCardPage
+    () => showMyDecksPage()
   );
 
 

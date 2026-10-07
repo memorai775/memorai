@@ -4,7 +4,7 @@
 // ==============================
 
 // ファイルを大きく作り直したときは数字を上げる（古い保存分を消すため）
-const CACHE_NAME = "memorai-v2";
+const CACHE_NAME = "memorai-v3";
 
 
 // 最初に保存しておくファイル
@@ -14,6 +14,7 @@ const APP_FILES = [
   "./app.js",
   "./englishWords.js",
   "./subjectCards.js",
+  "./mydecks.js",
   "./firebase-config.js",
   "./community.js",
   "./manifest.json",

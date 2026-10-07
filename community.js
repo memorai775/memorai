@@ -1,7 +1,7 @@
 // ==============================
 // みんなの単語帳
-// 利用者が作ったカードを投稿・取り込みできる（Firebase を使う）
-// app.js の関数（getCards・saveCards・escapeHTML・setActiveNav など）を使うので、app.js のあとに読み込む
+// 利用者が作った単語帳を投稿・取り込みできる（Firebase を使う）
+// app.js・mydecks.js の関数を使うので、その2つのあとに読み込む
 // ==============================
 
 
@@ -136,8 +136,24 @@ async function communitySignIn() {
 
 
 // ログイン済みならそのユーザー、まだなら Google ログインを開いて、ログインできたユーザーを返す（できなければ null）
-// 一覧を開いた時点でログイン状態は読み込み済みなので、currentUser をそのまま使ってすぐにログイン画面を開く
+// ログイン状態はアプリを開いたときに読み込み始めているので、currentUser をそのまま使ってすぐにログイン画面を開く
 async function requireCommunityUser() {
+
+  if (!navigator.onLine) {
+
+    alert("みんなの単語帳はインターネットにつながっているときだけ使えます。");
+
+    return null;
+  }
+
+
+  if (!initCommunity()) {
+
+    alert("みんなの単語帳は準備中です。もうしばらくお待ちください。");
+
+    return null;
+  }
+
 
   if (communityAuth.currentUser) {
 
@@ -180,18 +196,20 @@ function formatDeckDate(timestamp) {
 // すでに取り込んだ単語帳か
 function isDeckImported(deckId) {
 
-  return getCards().some(card => card.deckId === deckId);
+  return getMyDecks().some(deck => deck.importedFrom === deckId);
 }
 
 
-// 自分で追加したカード（レベルなし・サンプルでも取り込みでもない）
-function getOwnCards() {
+// 投稿できる自分の単語帳（自分で作ったもの・カードが1枚以上・まだ投稿していない）
+function getPostableMyDecks() {
 
-  return getCards().filter(
-    card =>
-      !card.level &&
-      !card.deckId &&
-      !sampleCardIds.has(card.id)
+  const allCards = getCards();
+
+  return getMyDecks().filter(
+    deck =>
+      !deck.importedFrom &&
+      !deck.postedId &&
+      getMyDeckCards(deck.id, allCards).length > 0
   );
 }
 
@@ -383,7 +401,7 @@ async function showCommunityPage(selectedSubject = "") {
       id="postDeckButton"
       style="margin-bottom:12px;"
     >
-      📤 自分のカードを投稿する
+      📤 自分の単語帳を投稿する
     </button>
 
 
@@ -429,7 +447,7 @@ async function showCommunityPage(selectedSubject = "") {
     .querySelector("#postDeckButton")
     .addEventListener(
       "click",
-      showPostDeckPage
+      () => showChoosePostDeckPage()
     );
 
 
@@ -646,13 +664,30 @@ async function showDeckDetailPage(deckId) {
 }
 
 
-// 取り込んだカードは「自分で追加したカード」と同じ扱い（レベルなし）で、どの単語帳から来たかを残す
+// 取り込むと「単語帳」タブに自分の単語帳として入る（他の人の作品なので投稿はできない）
+// カードはレベルなし（自分で追加したカードと同じ扱い）で、どの単語帳から来たかを残す
 function importDeck(deckId, deck, deckCards) {
 
   if (isDeckImported(deckId)) {
 
     return;
   }
+
+
+  const myDeck = {
+    id: newMyDeckId(),
+    title: String(deck.title || "取り込んだ単語帳").slice(0, COMMUNITY_LIMITS.title),
+    subject: String(deck.subject || "その他").slice(0, COMMUNITY_LIMITS.subject),
+    description: String(deck.description || "").slice(0, COMMUNITY_LIMITS.description),
+    createdAt: Date.now(),
+    importedFrom: deckId
+  };
+
+  const myDecks = getMyDecks();
+
+  myDecks.push(myDeck);
+
+  saveMyDecks(myDecks);
 
 
   // ★必ず保存されている全カードを取得してから追加する
@@ -670,9 +705,10 @@ function importDeck(deckId, deck, deckCards) {
         id: baseId + index,
         question: String(card.q || "").slice(0, COMMUNITY_LIMITS.cardText),
         answer: String(card.a || "").slice(0, COMMUNITY_LIMITS.cardText),
-        subject: String(deck.subject || "その他").slice(0, COMMUNITY_LIMITS.subject),
+        subject: myDeck.subject,
+        myDeckId: myDeck.id,
         deckId: deckId,
-        deckTitle: String(deck.title || "").slice(0, COMMUNITY_LIMITS.title),
+        deckTitle: myDeck.title,
         correct: 0,
         wrong: 0
       });
@@ -685,7 +721,7 @@ function importDeck(deckId, deck, deckCards) {
 
 
   alert(
-    `${deckCards.length}枚を取り込みました！\nホームの「新しいカード」から少しずつ出てきます。`
+    `${deckCards.length}枚を取り込みました！\n「単語帳」タブから勉強できます。ホームの「新しいカード」にも少しずつ出てきます。`
   );
 
   showDeckDetailPage(deckId);
@@ -696,8 +732,10 @@ function importDeck(deckId, deck, deckCards) {
 // 投稿画面
 // ------------------------------
 
-async function showPostDeckPage() {
+// 「みんな」タブから：投稿する単語帳を選ぶ
+async function showChoosePostDeckPage() {
 
+  // ★押した瞬間にログイン画面を開く（await の前に何もしない）
   const user =
     await requireCommunityUser();
 
@@ -707,28 +745,35 @@ async function showPostDeckPage() {
   }
 
 
-  const ownCards =
-    getOwnCards();
-
-  const subjects =
-    [...new Set(ownCards.map(card => card.subject))];
+  const decks =
+    getPostableMyDecks();
 
 
-  if (subjects.length === 0) {
+  if (decks.length === 0) {
 
     document.querySelector("main").innerHTML = `
 
       ${backHeaderHTML()}
 
       <h1 class="page-title">
-        自分のカードを投稿する
+        単語帳を投稿する
       </h1>
 
       <div class="form-card">
+
         <p class="community-note">
-          投稿できるのは、自分で追加したカードです。<br>
-          下の「カード」から追加してから、もう一度開いてください。
+          投稿できる単語帳がありません。<br>
+          「単語帳」タブで単語帳を作って、カードを1枚以上入れてから投稿してください。<br>
+          （取り込んだ単語帳と、投稿済みの単語帳は投稿できません）
         </p>
+
+        <button
+          class="add-card-button"
+          id="goMyDecksButton"
+        >
+          単語帳タブへ
+        </button>
+
       </div>
 
     `;
@@ -737,24 +782,114 @@ async function showPostDeckPage() {
       .querySelector("#backButton")
       .addEventListener("click", () => showCommunityPage());
 
+    document
+      .querySelector("#goMyDecksButton")
+      .addEventListener("click", showMyDecksPage);
+
     return;
   }
 
 
-  const subjectOptions =
-    subjects
-      .map(subject => {
+  const allCards = getCards();
 
-        const count =
-          ownCards.filter(card => card.subject === subject).length;
+  const deckHTML =
+    decks
+      .map(deck => `
+        <div class="subject-card">
 
-        return `
-          <option value="${escapeHTML(subject)}">
-            ${escapeHTML(subject)}（${count}枚）
-          </option>
-        `;
-      })
+          <div class="subject-header">
+
+            <div class="subject-name">
+              ${escapeHTML(deck.title)}
+            </div>
+
+            <div class="subject-accuracy">
+              ${getMyDeckCards(deck.id, allCards).length}枚
+            </div>
+
+          </div>
+
+          <div class="subject-info">
+            <span>${escapeHTML(deck.subject)}</span>
+          </div>
+
+          <button
+            class="subject-study-button"
+            data-post-deck-id="${escapeHTML(deck.id)}"
+          >
+            📤 この単語帳を投稿する
+          </button>
+
+        </div>
+      `)
       .join("");
+
+
+  document.querySelector("main").innerHTML = `
+
+    ${backHeaderHTML()}
+
+    <h1 class="page-title">
+      投稿する単語帳を選ぶ
+    </h1>
+
+    <div class="subject-list">
+      ${deckHTML}
+    </div>
+
+  `;
+
+
+  document
+    .querySelector("#backButton")
+    .addEventListener("click", () => showCommunityPage());
+
+
+  document
+    .querySelectorAll("[data-post-deck-id]")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => showPostDeckPage(button.dataset.postDeckId, () => showChoosePostDeckPage())
+      );
+    });
+}
+
+
+// 投稿の入力画面（タイトル・説明は単語帳のものが最初から入っている）
+// onBack：戻るボタンで戻る先（省略時は単語帳の画面）
+async function showPostDeckPage(myDeckId, onBack) {
+
+  // ★押した瞬間にログイン画面を開く（await の前に何もしない）
+  const user =
+    await requireCommunityUser();
+
+  if (!user) {
+
+    return;
+  }
+
+
+  setActiveNav("communityNavButton");
+
+
+  const myDeck =
+    getMyDeck(myDeckId);
+
+  const deckCards =
+    getMyDeckCards(myDeckId);
+
+  const goBack =
+    onBack || (() => showMyDeckPage(myDeckId));
+
+
+  if (!myDeck || myDeck.importedFrom || myDeck.postedId || deckCards.length === 0) {
+
+    goBack();
+
+    return;
+  }
 
 
   document.querySelector("main").innerHTML = `
@@ -763,23 +898,20 @@ async function showPostDeckPage() {
 
 
     <h1 class="page-title">
-      自分のカードを投稿する
+      単語帳を投稿する
     </h1>
 
 
     <div class="form-card">
 
-      <div class="form-group">
-
-        <label for="postSubjectSelect">
-          投稿する科目
-        </label>
-
-        <select id="postSubjectSelect">
-          ${subjectOptions}
-        </select>
-
-      </div>
+      <p class="community-note">
+        ${escapeHTML(myDeck.subject)}・${Math.min(deckCards.length, COMMUNITY_LIMITS.maxCards)}枚を投稿します。
+        ${
+          deckCards.length > COMMUNITY_LIMITS.maxCards
+            ? `<br>（${COMMUNITY_LIMITS.maxCards}枚までなので、最初の${COMMUNITY_LIMITS.maxCards}枚だけになります）`
+            : ""
+        }
+      </p>
 
 
       <div class="form-group">
@@ -792,7 +924,7 @@ async function showPostDeckPage() {
           type="text"
           id="postTitleInput"
           maxlength="${COMMUNITY_LIMITS.title}"
-          placeholder="例：鎌倉時代の重要語句まとめ"
+          value="${escapeHTML(myDeck.title)}"
         >
 
       </div>
@@ -808,7 +940,7 @@ async function showPostDeckPage() {
           id="postDescriptionInput"
           maxlength="${COMMUNITY_LIMITS.description}"
           placeholder="例：教科書の太字の語句を、自分で問題にしました。"
-        ></textarea>
+        >${escapeHTML(myDeck.description || "")}</textarea>
 
       </div>
 
@@ -859,7 +991,7 @@ async function showPostDeckPage() {
 
   document
     .querySelector("#backButton")
-    .addEventListener("click", () => showCommunityPage());
+    .addEventListener("click", goBack);
 
 
   document
@@ -870,7 +1002,7 @@ async function showPostDeckPage() {
 
         event.preventDefault();
 
-        showCommunityRulesPage(showPostDeckPage);
+        showCommunityRulesPage(() => showPostDeckPage(myDeckId, onBack));
       }
     );
 
@@ -879,15 +1011,12 @@ async function showPostDeckPage() {
     .querySelector("#submitDeckButton")
     .addEventListener(
       "click",
-      () => submitDeck(user, ownCards)
+      () => submitDeck(user, myDeck, deckCards)
     );
 }
 
 
-async function submitDeck(user, ownCards) {
-
-  const subject =
-    document.querySelector("#postSubjectSelect").value;
+async function submitDeck(user, myDeck, deckCards) {
 
   const title =
     document.querySelector("#postTitleInput").value.trim();
@@ -903,8 +1032,7 @@ async function submitDeck(user, ownCards) {
 
 
   const postCards =
-    ownCards
-      .filter(card => card.subject === subject)
+    deckCards
       .slice(0, COMMUNITY_LIMITS.maxCards)
       .map(card => ({
         q: card.question.slice(0, COMMUNITY_LIMITS.cardText),
@@ -921,10 +1049,6 @@ async function submitDeck(user, ownCards) {
   } else if (!nickname) {
 
     error = "ニックネームを入力してください。";
-
-  } else if (subject.length > COMMUNITY_LIMITS.subject) {
-
-    error = `科目名が長すぎます（${COMMUNITY_LIMITS.subject}文字まで）。カードの科目名を短くしてください。`;
 
   } else if (!agreed) {
 
@@ -969,7 +1093,7 @@ async function submitDeck(user, ownCards) {
   batch.set(deckRef, {
     title: title,
     description: description,
-    subject: subject,
+    subject: myDeck.subject.slice(0, COMMUNITY_LIMITS.subject),
     cardCount: postCards.length,
     authorUid: user.uid,
     authorName: nickname,
@@ -999,6 +1123,16 @@ async function submitDeck(user, ownCards) {
     submitButton.textContent = "📤 投稿する";
 
     return;
+  }
+
+
+  // 自分の単語帳に「投稿済み」を記録する（同じ単語帳を二重に投稿しないため）
+  const latestDeck =
+    getMyDeck(myDeck.id);
+
+  if (latestDeck) {
+
+    updateMyDeck({ ...latestDeck, postedId: deckRef.id });
   }
 
 
@@ -1069,6 +1203,17 @@ function showDeleteDeckPage(deckId, deck) {
 
           return;
         }
+
+        // 自分の単語帳の「投稿済み」を外して、また投稿できるようにする
+        getMyDecks()
+          .filter(myDeck => myDeck.postedId === deckId)
+          .forEach(myDeck => {
+
+            const { postedId, ...rest } = myDeck;
+
+            updateMyDeck(rest);
+          });
+
 
         alert("削除しました。");
 
@@ -1262,3 +1407,17 @@ document
     "click",
     () => showCommunityPage()
   );
+
+
+// アプリを開いたら（Firebase の SDK を読み終えたら）ログイン状態の読み込みを始めておく
+// → 「投稿する」を押したとき、すぐログイン済みかどうかがわかり、ログイン画面をすぐ開ける
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    if (navigator.onLine && initCommunity()) {
+
+      communityAuth.onAuthStateChanged(() => {});
+    }
+  }
+);
