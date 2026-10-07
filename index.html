@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>メモライ｜受験生のための無料暗記カード</title>
+
+  <meta
+    name="description"
+    content="受験生向けの無料暗記カード。英単語・熟語・古文単語・日本史・世界史・地理・生物・化学を、苦手と復習のタイミングに合わせて毎日少しずつ覚えられます。"
+  >
+
+
+  <!-- OGP（SNS でシェアされたときの表示）
+       ※ og:url と og:image は公開先の URL（https://ユーザー名.github.io/リポジトリ名/）にする -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="メモライ">
+  <meta property="og:title" content="メモライ｜受験生のための無料暗記カード">
+  <meta property="og:description" content="英単語・熟語・古文単語・日本史・世界史・地理・生物・化学。受験生向けの無料暗記カード。">
+  <meta property="og:url" content="https://USERNAME.github.io/memorai/">
+  <meta property="og:image" content="https://USERNAME.github.io/memorai/icons/ogp.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+
+
+  <!-- PWA（ホーム画面に追加・オフライン対応） -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#222222">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="メモライ">
+
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+    body {
+      margin: 0;
+
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Hiragino Kaku Gothic ProN",
+        "Yu Gothic",
+        sans-serif;
+
+      background: #f5f7fb;
+
+      color: #222;
+    }
+
+
+    /* ==============================
+       ヘッダー
+       ============================== */
+
+    header {
+
+      background: white;
+
+      padding: 20px;
+
+      border-bottom:
+        1px solid #e5e7eb;
+    }
+
+
+    .header-inner {
+
+      max-width: 700px;
+
+      margin: 0 auto;
+    }
+
+
+    .logo {
+
+      font-size: 28px;
+
+      font-weight: 800;
+
+      letter-spacing: 1px;
+    }
+
+
+    .subtitle {
+
+      color: #777;
+
+      margin-top: 5px;
+
+      font-size: 14px;
+    }
+
+
+    /* ==============================
+       メイン
+       ============================== */
+
+    main {
+
+      max-width: 700px;
+
+      margin: 0 auto;
+
+      padding:
+        24px 16px 100px;
+    }
+
+
+    .welcome {
+
+      margin-bottom: 20px;
+    }
+
+
+    .welcome h1 {
+
+      font-size: 24px;
+
+      margin-bottom: 5px;
+    }
+
+
+    .welcome p {
+
+      color: #666;
+
+      margin-top: 0;
+    }
+
+
+    /* ==============================
+       共通ボタン
+       ============================== */
+
+    button {
+
+      border: none;
+
+      border-radius: 12px;
+
+      padding:
+        14px 20px;
+
+      font-size: 16px;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+      transition:
+        opacity 0.15s,
+        transform 0.1s;
+    }
+
+
+    button:active {
+
+      transform: scale(0.98);
+    }
+
+
+    button:hover {
+
+      opacity: 0.85;
+    }
+
+
+    /* ==============================
+       ホーム 学習カード
+       ============================== */
+
+    .study-card {
+
+      background: white;
+
+      border-radius: 20px;
+
+      padding: 28px;
+
+      text-align: center;
+
+      box-shadow:
+        0 4px 15px rgba(0,0,0,0.06);
+
+      margin-bottom: 20px;
+    }
+
+
+    .study-card .number {
+
+      font-size: 52px;
+
+      font-weight: 800;
+
+      margin: 10px 0;
+    }
+
+
+    .study-card p {
+
+      color: #777;
+
+      margin-bottom: 20px;
+    }
+
+
+    .start-button {
+
+      background: #222;
+
+      color: white;
+
+      width: 100%;
+    }
+
+
+    /* ==============================
+       統計
+       ============================== */
+
+    .stats {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(3, 1fr);
+
+      gap: 12px;
+    }
+
+
+    .stat {
+
+      background: white;
+
+      border-radius: 16px;
+
+      padding: 18px 10px;
+
+      text-align: center;
+    }
+
+
+    .stat-number {
+
+      font-size: 24px;
+
+      font-weight: 800;
+    }
+
+
+    .stat-label {
+
+      font-size: 12px;
+
+      color: #777;
+
+      margin-top: 5px;
+    }
+
+
+    /* ==============================
+       ナビゲーション
+       ============================== */
+
+    nav {
+
+      position: fixed;
+
+      bottom: 0;
+
+      left: 0;
+
+      right: 0;
+
+      background: white;
+
+      border-top:
+        1px solid #e5e7eb;
+
+      display: flex;
+
+      justify-content: center;
+
+      z-index: 100;
+    }
+
+
+    .nav-inner {
+
+      width: 100%;
+
+      max-width: 700px;
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(3, 1fr);
+    }
+
+
+    .nav-button {
+
+      background: white;
+
+      color: #666;
+
+      border-radius: 0;
+
+      padding:
+        15px 5px;
+
+      font-size: 13px;
+    }
+
+
+    .nav-button.active {
+
+      color: #222;
+
+      font-weight: 800;
+    }
+
+
+    /* ==============================
+       勉強画面
+       ============================== */
+
+    .study-header {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      margin-bottom: 20px;
+
+      color: #666;
+    }
+
+
+    .study-header button {
+
+      background: white;
+
+      color: #333;
+
+      padding:
+        8px 12px;
+
+      font-size: 14px;
+    }
+
+
+    .flashcard {
+
+      background: white;
+
+      border-radius: 24px;
+
+      padding: 35px 25px;
+
+      min-height: 400px;
+
+      display: flex;
+
+      flex-direction: column;
+
+      justify-content: center;
+
+      text-align: center;
+
+      box-shadow:
+        0 8px 25px rgba(0,0,0,0.08);
+    }
+
+
+    .subject {
+
+      color: #777;
+
+      font-size: 14px;
+
+      margin-bottom: 25px;
+    }
+
+
+    .question {
+
+      font-size: 27px;
+
+      font-weight: 700;
+
+      line-height: 1.6;
+
+      margin-bottom: 40px;
+    }
+
+
+    #showAnswerButton {
+
+      background: #222;
+
+      color: white;
+
+      width: 100%;
+
+      max-width: 400px;
+    }
+
+
+    .answer {
+
+      margin-bottom: 30px;
+    }
+
+
+    .answer-title {
+
+      color: #777;
+
+      font-size: 14px;
+
+      margin-bottom: 10px;
+    }
+
+
+    .answer-text {
+
+      font-size: 28px;
+
+      font-weight: 800;
+
+      line-height: 1.5;
+
+      word-break: break-word;
+    }
+
+
+    .result-buttons {
+
+      display: grid;
+
+      grid-template-columns:
+        1fr 1fr;
+
+      gap: 12px;
+    }
+
+
+    #rememberButton {
+
+      background: #222;
+
+      color: white;
+    }
+
+
+    #notRememberButton {
+
+      background: #eee;
+
+      color: #222;
+    }
+
+
+    /* ==============================
+       カード追加画面
+       ============================== */
+
+    .page-title {
+
+      font-size: 24px;
+
+      margin-bottom: 20px;
+    }
+
+
+    .form-card {
+
+      background: white;
+
+      border-radius: 20px;
+
+      padding: 25px;
+
+      box-shadow:
+        0 4px 15px rgba(0,0,0,0.06);
+    }
+
+
+    .form-group {
+
+      margin-bottom: 20px;
+    }
+
+
+    .form-group label {
+
+      display: block;
+
+      font-weight: 700;
+
+      margin-bottom: 8px;
+    }
+
+
+    .form-group input,
+    .form-group textarea {
+
+      width: 100%;
+
+      border:
+        1px solid #ddd;
+
+      border-radius: 12px;
+
+      padding: 14px;
+
+      font-size: 16px;
+
+      font-family: inherit;
+
+      outline: none;
+    }
+
+
+    .form-group textarea {
+
+      min-height: 120px;
+
+      resize: vertical;
+    }
+
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+
+      border-color: #222;
+    }
+
+
+    .add-card-button {
+
+      width: 100%;
+
+      background: #222;
+
+      color: white;
+    }
+
+
+    /* ==============================
+       苦手カード
+       ============================== */
+
+    .weak-card-list {
+
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 12px;
+    }
+
+
+    .weak-card {
+
+      background: white;
+
+      border-radius: 16px;
+
+      padding: 16px;
+
+      display: flex;
+
+      gap: 15px;
+
+      box-shadow:
+        0 4px 12px rgba(0,0,0,0.05);
+    }
+
+
+    .weak-rank {
+
+      font-size: 22px;
+
+      font-weight: 800;
+
+      min-width: 30px;
+
+      text-align: center;
+    }
+
+
+    .weak-content {
+
+      flex: 1;
+
+      min-width: 0;
+    }
+
+
+    .weak-subject {
+
+      font-size: 12px;
+
+      color: #777;
+
+      margin-bottom: 5px;
+    }
+
+
+    .weak-question {
+
+      font-weight: 700;
+
+      line-height: 1.5;
+
+      word-break: break-word;
+    }
+
+
+    .weak-result {
+
+      margin-top: 8px;
+
+      font-size: 12px;
+
+      color: #888;
+    }
+
+
+    .no-weak-card {
+
+      background: white;
+
+      border-radius: 16px;
+
+      padding: 25px;
+
+      text-align: center;
+
+      color: #777;
+    }
+
+
+    .weak-study-button {
+
+      width: 100%;
+
+      margin-top: 20px;
+
+      margin-bottom: 15px;
+
+      background: #222;
+
+      color: white;
+    }
+
+
+    .weak-study-button:disabled {
+
+      background: #ddd;
+
+      color: #999;
+
+      cursor: not-allowed;
+    }
+
+
+    /* ==============================
+       科目別成績
+       ============================== */
+
+    .subject-list {
+
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 12px;
+    }
+
+
+    .subject-card {
+
+      background: white;
+
+      border-radius: 16px;
+
+      padding: 18px;
+
+      box-shadow:
+        0 4px 12px rgba(0,0,0,0.05);
+    }
+
+
+    .subject-header {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+    }
+
+
+    .subject-name {
+
+      font-size: 18px;
+
+      font-weight: 800;
+    }
+
+
+    .subject-accuracy {
+
+      font-size: 22px;
+
+      font-weight: 800;
+    }
+
+
+    .subject-bar {
+
+      width: 100%;
+
+      height: 8px;
+
+      background: #eee;
+
+      border-radius: 10px;
+
+      overflow: hidden;
+
+      margin: 12px 0;
+    }
+
+
+    .subject-bar-fill {
+
+      height: 100%;
+
+      background: #222;
+
+      border-radius: 10px;
+    }
+
+
+    .subject-info {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      gap: 5px;
+
+      font-size: 12px;
+
+      color: #777;
+    }
+
+
+    .subject-study-button {
+
+      width: 100%;
+
+      margin-top: 15px;
+
+      background: #222;
+
+      color: white;
+
+      font-size: 14px;
+
+      padding: 11px;
+    }
+
+
+    /* ==============================
+       英単語 レベル別
+       ============================== */
+
+    .level-entry-button {
+
+      width: 100%;
+
+      background: white;
+
+      color: #222;
+
+      border: 2px solid #222;
+
+      margin-bottom: 20px;
+    }
+
+
+    /* ==============================
+       ホーム 今日の復習／新しいカード
+       ============================== */
+
+    .today-counts {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 12px;
+
+      margin-bottom: 20px;
+    }
+
+
+    .study-card .today-counts p {
+
+      margin: 0;
+    }
+
+
+    /* ==============================
+       科目設定
+       ============================== */
+
+    .settings-lead {
+
+      color: #666;
+
+      margin-top: 0;
+    }
+
+
+    .settings-subject {
+
+      background: white;
+
+      border-radius: 16px;
+
+      padding: 16px 18px;
+
+      margin-bottom: 12px;
+
+      box-shadow:
+        0 4px 12px rgba(0,0,0,0.05);
+    }
+
+
+    .settings-subject-name {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+      font-size: 18px;
+
+      font-weight: 800;
+    }
+
+
+    .settings-options[hidden] {
+
+      display: none;
+    }
+
+
+    .settings-row-label {
+
+      font-size: 12px;
+
+      color: #777;
+
+      margin: 12px 0 6px;
+    }
+
+
+    .check-row {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 8px 16px;
+    }
+
+
+    .check-row label {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 4px;
+    }
+
+
+    .settings-error {
+
+      color: #c0392b;
+
+      font-weight: 700;
+    }
+
+
+    .settings-error[hidden] {
+
+      display: none;
+    }
+
+
+    /* ==============================
+       スマホ
+       ============================== */
+
+    @media (max-width: 500px) {
+
+      main {
+
+        padding-top: 20px;
+
+        padding-left: 12px;
+
+        padding-right: 12px;
+      }
+
+
+      .stats {
+
+        gap: 8px;
+      }
+
+
+      .stat {
+
+        padding:
+          15px 5px;
+      }
+
+
+      .stat-number {
+
+        font-size: 21px;
+      }
+
+
+      .flashcard {
+
+        min-height: 450px;
+
+        padding:
+          30px 20px;
+      }
+
+
+      .question {
+
+        font-size: 23px;
+      }
+
+
+      .answer-text {
+
+        font-size: 25px;
+      }
+
+
+      .form-card {
+
+        padding: 20px;
+      }
+
+
+      .subject-info {
+
+        flex-direction: column;
+
+        gap: 3px;
+      }
+
+
+      .study-card {
+
+        padding: 24px 18px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <!-- ==============================
+       ヘッダー
+       ============================== -->
+
+  <header>
+
+    <div class="header-inner">
+
+      <div class="logo">
+        メモライ
+      </div>
+
+
+      <div class="subtitle">
+        受験生のための暗記カード
+      </div>
+
+    </div>
+
+  </header>
+
+
+  <!-- ==============================
+       メイン
+       ============================== -->
+
+  <main>
+
+    <section class="welcome">
+
+      <h1>
+        今日も勉強しよう。
+      </h1>
+
+
+      <p>
+        少しずつでも、毎日続けよう。
+      </p>
+
+    </section>
+
+
+    <section class="study-card">
+
+      <p>
+        今日の復習
+      </p>
+
+
+      <div class="number">
+        5
+      </div>
+
+
+      <p>
+        枚のカードがあります
+      </p>
+
+
+      <button
+        class="start-button"
+        id="startButton"
+      >
+        勉強を始める
+      </button>
+
+    </section>
+
+
+    <section class="stats">
+
+
+      <div class="stat">
+
+        <div class="stat-number">
+          0
+        </div>
+
+
+        <div class="stat-label">
+          学習カード
+        </div>
+
+      </div>
+
+
+      <div class="stat">
+
+        <div class="stat-number">
+          0%
+        </div>
+
+
+        <div class="stat-label">
+          正答率
+        </div>
+
+      </div>
+
+
+      <div class="stat">
+
+        <div class="stat-number">
+          0
+        </div>
+
+
+        <div class="stat-label">
+          連続日数
+        </div>
+
+      </div>
+
+
+    </section>
+
+  </main>
+
+
+  <!-- ==============================
+       ナビゲーション
+       ============================== -->
+
+  <nav>
+
+    <div class="nav-inner">
+
+
+      <button
+        class="nav-button active"
+        id="homeNavButton"
+      >
+
+        🏠<br>
+
+        ホーム
+
+      </button>
+
+
+      <button
+        class="nav-button"
+        id="cardNavButton"
+      >
+
+        📚<br>
+
+        カード
+
+      </button>
+
+
+      <button
+        class="nav-button"
+        id="statsNavButton"
+      >
+
+        📊<br>
+
+        成績
+
+      </button>
+
+
+    </div>
+
+  </nav>
+
+
+  <!-- ==============================
+       JavaScript
+       ============================== -->
+
+  <script src="englishWords.js"></script>
+  <script src="subjectCards.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    // オフライン対応（https で公開したとき・localhost で動かしたときだけ。ファイルを直接開いたときは何もしない）
+    if (
+      "serviceWorker" in navigator &&
+      (location.protocol === "https:" || location.hostname === "localhost")
+    ) {
+
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
+
+
+</body>
+
+</html>
